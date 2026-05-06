@@ -16,7 +16,6 @@ export default function AdminSignIn() {
 
   return (
     <div className="h-screen overflow-hidden flex flex-col bg-white">
-      <Header />
 
       <main className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-[320px]">

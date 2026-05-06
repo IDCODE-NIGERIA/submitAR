@@ -28,7 +28,7 @@ export default function Hero() {
               <Link href="/get-started" className="bg-[#0052cc] text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-blue-700 transition-all">
                 Get Started
               </Link>
-              <Link href="/learn-more" className="border border-blue-600 text-blue-600 px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-all">
+              <Link href="#Howitworks" className="border border-blue-600 text-blue-600 px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-all">
                 Learn more
               </Link>
             </div>

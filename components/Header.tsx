@@ -10,13 +10,34 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [recallModalOpen, setRecallModalOpen] = useState(false);
 
+  // TODO: Replace with real auth (Context or session) later
+  const isAdminLoggedIn = false;   // Change this dynamically later
+
   const navLinks = [
-    { name: "Services", href: "#Services" },
-    { name: "How It Works", href: "#Howitworks" },
-    { name: "Pricing", href: "#Pricing" },
+    { name: "Services", href: "/#Services", id: "Services" },
+    { name: "How It Works", href: "/#Howitworks", id: "Howitworks" },
+    { name: "Pricing", href: "/#Pricing", id: "Pricing" },
+    { name: "Dashboard", href: "/dashboard", adminOnly: true },
     { name: "Terms & Conditions", href: "/terms" },
     { name: "Privacy Policy", href: "/privacy-policy" },
   ];
+
+  const handleNavClick = (link: { href: string; id?: string }) => {
+    if (link.id && window.location.pathname !== "/") {
+      window.location.href = link.href;
+    }
+    setIsOpen(false);
+  };
+
+  const handleLogout = () => {
+    // TODO: Add your real logout logic here (clear token, etc.)
+    window.location.href = "/";
+  };
+
+  // Filter nav links - show Dashboard only when admin is logged in
+  const visibleNavLinks = navLinks.filter(link => 
+    !link.adminOnly || isAdminLoggedIn
+  );
 
   return (
     <>
@@ -38,10 +59,11 @@ export default function Header() {
 
           {/* Desktop Nav */}
           <nav className="hidden lg:flex items-center gap-8 text-sm font-medium text-gray-500">
-            {navLinks.map((link) => (
+            {visibleNavLinks.map((link) => (
               <Link
                 key={link.name}
                 href={link.href}
+                onClick={() => handleNavClick(link)}
                 className="hover:text-black transition-colors"
               >
                 {link.name}
@@ -49,18 +71,27 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Desktop CTA — now a button that opens the modal */}
-          <div className="hidden lg:block">
-            <button
-              type="button"
-              onClick={() => setRecallModalOpen(true)}
-              className="bg-[#0052cc] hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all"
-            >
-              Track Your Order
-            </button>
+          {/* Right Side */}
+          <div className="hidden lg:flex items-center gap-4">
+            {isAdminLoggedIn ? (
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all"
+              >
+                Log Out
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setRecallModalOpen(true)}
+                className="bg-[#0052cc] hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all"
+              >
+                Track Your Order
+              </button>
+            )}
           </div>
 
-          {/* Mobile hamburger */}
+          {/* Mobile Hamburger */}
           <button
             className="lg:hidden p-2 text-gray-600"
             onClick={() => setIsOpen(!isOpen)}
@@ -74,38 +105,43 @@ export default function Header() {
         {isOpen && (
           <div className="lg:hidden absolute top-full left-0 w-full bg-white border-b border-gray-100 z-50 p-4 shadow-xl">
             <nav className="flex flex-col gap-4">
-              {navLinks.map((link) => (
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
+                  onClick={() => handleNavClick(link)}
                   className="text-base font-medium text-gray-600 hover:text-black py-2"
-                  onClick={() => setIsOpen(false)}
                 >
                   {link.name}
                 </Link>
               ))}
 
-              {/* Mobile Track button — opens modal instead of navigating */}
-              <button
-                type="button"
-                onClick={() => { setIsOpen(false); setRecallModalOpen(true); }}
-                className="bg-[#0052cc] text-white text-center py-3 rounded-lg font-semibold mt-2 text-sm"
-              >
-                Track Your Order
-              </button>
+              <div className="pt-4 border-t">
+                {isAdminLoggedIn ? (
+                  <button
+                    onClick={() => { setIsOpen(false); handleLogout(); }}
+                    className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold"
+                  >
+                    Log Out
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setIsOpen(false); setRecallModalOpen(true); }}
+                    className="w-full bg-[#0052cc] text-white py-3 rounded-lg font-semibold"
+                  >
+                    Track Your Order
+                  </button>
+                )}
+              </div>
             </nav>
           </div>
         )}
       </header>
 
-      {/* Modal rendered outside header so it overlays the full page */}
       <RecallModal
         isOpen={recallModalOpen}
         onClose={() => setRecallModalOpen(false)}
-        onVerified={(identifier) => {
-          // TODO: use identifier to fetch order — for now just log it
-          console.log("Verified:", identifier);
-        }}
+        onVerified={(identifier) => console.log("Verified:", identifier)}
       />
     </>
   );
