@@ -44,10 +44,10 @@ export default function Header() {
         {/* Desktop CTA Button */}
         <div className="hidden lg:block">
           <Link 
-            href="/get-started"
+            href="/track-order"
             className="bg-[#0052cc] hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all"
           >
-            Get Started
+            Track Your Order
           </Link>
         </div>
 
