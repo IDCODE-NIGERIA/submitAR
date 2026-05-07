@@ -1,25 +1,30 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { 
-  MdWarning, 
-  MdUpload, 
-  MdLocalShipping, 
+import React, { useState, useMemo, useEffect } from 'react';
+import Header from '@/components/Header';
+import {
+  MdWarning,
+  MdUpload,
+  MdLocalShipping,
   MdTextFields,
   MdLightbulb,
   MdCreditCard,
+  MdEmail,
+  MdPhone,
 } from 'react-icons/md';
-import { 
-  FaCheckCircle, 
-  FaUser, 
-  FaBuilding 
+import {
+  FaCheckCircle,
+  FaUser,
+  FaBuilding,
 } from 'react-icons/fa';
 
 // ─── Pricing constants ────────────────────────────────────────────────────────
 const PRICES = {
   submission: 35_000,
   followup_standalone: 35_000,
-  submission_followup_bundle: 120_000,
+  submission_followup_weekly4: 120_000,
+  submission_followup_biweekly: 90_000,
+  submission_followup_single: 65_000,
   representation_attendance: 50_000,
   representation_speaking: 100_000,
   retrieval: 35_000,
@@ -29,21 +34,160 @@ function fmt(n: number) {
   return '₦' + n.toLocaleString('en-NG');
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 type LineItem = { label: string; amount: number; note?: string };
 
+type FormErrors = Partial<{
+  eligibility: string;
+  services: string;
+  receiveMethod_file: string;
+  receiveMethod_docType: string;
+  receiveMethod_text: string;
+  receiveMethod_pickupAddress: string;
+  receiveMethod_pickupDate: string;
+  receiveMethod_pickupTime: string;
+  receiveMethod_pickupContact: string;
+  receiveMethod_pickupPhone: string;
+  submission_location: string;
+  submission_date: string;
+  followup_frequency: string;
+  followup_date: string;
+  followup_location: string;
+  rep_org: string;
+  rep_purpose: string;
+  retrieval_item: string;
+  retrieval_location: string;
+  retrieval_date: string;
+  retrieval_delivery: string;
+  retrieval_distance: string;
+  retrieval_address: string;
+  docCategory: string;
+  company_name: string;
+  company_cac: string;
+  company_position: string;
+  company_idCard: string;
+  company_auth: string;
+  company_otp: string;
+  auth_letter: string;
+  identity_type: string;
+  identity_number: string;
+  identity_image: string;
+  identity_selfie: string;
+  info_name: string;
+  info_phone: string;
+  info_email: string;
+  info_address: string;
+  confirm_details: string;
+  confirm_authorize: string;
+}>;
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return (
+    <p className="text-xs text-red-600 font-medium mt-1 flex items-center gap-1">
+      <span aria-hidden>⚠</span> {msg}
+    </p>
+  );
+}
+
+function errBorder(msg?: string) {
+  return msg ? 'border-red-400' : 'border-gray-200';
+}
+
 export default function SubmitarForm() {
-  const [eligibility, setEligibility] = useState<string>('');
+  // ─── Core state ──────────────────────────────────────────────────────────
+  const [eligibility, setEligibility] = useState('');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [receiveMethod, setReceiveMethod] = useState<'upload' | 'text' | 'hardcopy'>('upload');
-  const [isCompanyDocument, setIsCompanyDocument] = useState<string>('');
-  const [repPurpose, setRepPurpose] = useState<string>(''); // 'attendance' | 'speaking'
+  const [isCompanyDocument, setIsCompanyDocument] = useState('');
+  const [repPurpose, setRepPurpose] = useState('');
+  const [wantsFollowUp, setWantsFollowUp] = useState('');
+  const [followUpFrequency, setFollowUpFrequency] = useState('');
+  const [otpSent, setOtpSent] = useState<'email' | 'mobile' | null>(null);
+  const [retrievalDelivery, setRetrievalDelivery] = useState('');
+  const [deliveryDistance, setDeliveryDistance] = useState('');
+
+  // ─── Receive method fields ────────────────────────────────────────────────
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadDesc, setUploadDesc] = useState('');
+  const [docType, setDocType] = useState('');
+  const [docText, setDocText] = useState('');
+  const [formattingStyle, setFormattingStyle] = useState('');
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [pickupDate, setPickupDate] = useState('');
+  const [pickupTime, setPickupTime] = useState('');
+  const [pickupContact, setPickupContact] = useState('');
+  const [pickupPhone, setPickupPhone] = useState('');
+  const [pickupNumDocs, setPickupNumDocs] = useState('');
+  const [pickupInstructions, setPickupInstructions] = useState('');
+
+  // ─── Submission details ───────────────────────────────────────────────────
+  const [submissionLocation, setSubmissionLocation] = useState('');
+  const [submissionDate, setSubmissionDate] = useState('');
+  const [submissionInstructions, setSubmissionInstructions] = useState('');
+
+  // ─── Standalone follow-up ─────────────────────────────────────────────────
+  const [followupDate, setFollowupDate] = useState('');
+  const [followupLocation, setFollowupLocation] = useState('');
+  const [followupStatus, setFollowupStatus] = useState('');
+  const [followupRef, setFollowupRef] = useState('');
+
+  // ─── Representation ───────────────────────────────────────────────────────
+  const [repOrg, setRepOrg] = useState('');
+  const [repGender, setRepGender] = useState('');
+  const [repTopic, setRepTopic] = useState('');
+  const [repScript, setRepScript] = useState('');
+  const [repFile, setRepFile] = useState<File | null>(null);
+
+  // ─── Retrieval ────────────────────────────────────────────────────────────
+  const [retrievalItem, setRetrievalItem] = useState('');
+  const [retrievalLocationVal, setRetrievalLocationVal] = useState('');
+  const [retrievalDate, setRetrievalDate] = useState('');
+  const [retrievalStatus, setRetrievalStatus] = useState('');
+  const [retrievalAddress, setRetrievalAddress] = useState('');
+
+  // ─── Company verification ─────────────────────────────────────────────────
+  const [companyName, setCompanyName] = useState('');
+  const [companyCac, setCompanyCac] = useState('');
+  const [companyPosition, setCompanyPosition] = useState('');
+  const [companyIdCard, setCompanyIdCard] = useState<File | null>(null);
+  const [companyAuthMethod, setCompanyAuthMethod] = useState('');
+  const [otpValue, setOtpValue] = useState('');
+  const [companyAuthLetter, setCompanyAuthLetter] = useState<File | null>(null);
+
+  // ─── Auth & identity ──────────────────────────────────────────────────────
+  const [authLetter, setAuthLetter] = useState<File | null>(null);
+  const [identityType, setIdentityType] = useState('');
+  const [identityNumber, setIdentityNumber] = useState('');
+  const [identityImage, setIdentityImage] = useState<File | null>(null);
+  const [identitySelfie, setIdentitySelfie] = useState<File | null>(null);
+
+  // ─── Personal info ────────────────────────────────────────────────────────
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+
+  // ─── Confirmation ─────────────────────────────────────────────────────────
+  const [confirmDetails, setConfirmDetails] = useState(false);
+  const [confirmAuthorize, setConfirmAuthorize] = useState(false);
+  const [saveRequest, setSaveRequest] = useState(false);
+
+  // ─── Validation state ─────────────────────────────────────────────────────
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const DELIVERY_FEES: Record<string, { label: string; amount: number }> = {
+    within5:  { label: 'Delivery (0–5 km)',   amount: 2_000  },
+    '5to15':  { label: 'Delivery (5–15 km)',  amount: 5_000  },
+    '15to30': { label: 'Delivery (15–30 km)', amount: 10_000 },
+    above30:  { label: 'Delivery (30+ km)',   amount: 15_000 },
+  };
 
   const services = [
-    { id: 'submission', label: 'Submission', icon: MdUpload },
-    { id: 'followup',   label: 'Follow-up',  icon: FaCheckCircle },
+    { id: 'submission',     label: 'Submission',     icon: MdUpload },
+    { id: 'followup',       label: 'Follow-up',      icon: FaCheckCircle },
     { id: 'representation', label: 'Representation', icon: FaUser },
-    { id: 'retrieval',  label: 'Retrieval',  icon: MdLocalShipping },
+    { id: 'retrieval',      label: 'Retrieval',      icon: MdLocalShipping },
   ];
 
   const toggleService = (service: string) => {
@@ -52,28 +196,171 @@ export default function SubmitarForm() {
     );
   };
 
-  // ─── Order summary computation ─────────────────────────────────────────────
+  const has = (id: string) => selectedServices.includes(id);
+
+  // ─── Validation function ──────────────────────────────────────────────────
+  function validate(): FormErrors {
+    const e: FormErrors = {};
+
+    if (!eligibility) {
+      e.eligibility = 'Please answer the eligibility question.';
+    }
+    if (eligibility !== 'no') return e;
+
+    if (selectedServices.length === 0) {
+      e.services = 'Please select at least one service.';
+    }
+
+    if (has('submission')) {
+      if (receiveMethod === 'upload' && !uploadFile) {
+        e.receiveMethod_file = 'Please upload a document.';
+      }
+      if (receiveMethod === 'text') {
+        if (!docType.trim()) e.receiveMethod_docType = 'Please enter the document type.';
+        if (!docText.trim()) e.receiveMethod_text = 'Please paste the document text.';
+      }
+      if (receiveMethod === 'hardcopy') {
+        if (!pickupAddress.trim())  e.receiveMethod_pickupAddress = 'Pickup address is required.';
+        if (!pickupDate)            e.receiveMethod_pickupDate    = 'Pickup date is required.';
+        if (!pickupTime)            e.receiveMethod_pickupTime    = 'Pickup time is required.';
+        if (!pickupContact.trim())  e.receiveMethod_pickupContact = 'Contact person name is required.';
+        if (!pickupPhone.trim())    e.receiveMethod_pickupPhone   = 'Phone number is required.';
+      }
+      if (!submissionLocation.trim()) e.submission_location = 'Submission location is required.';
+      if (!submissionDate)            e.submission_date     = 'Submission date is required.';
+      if (!has('followup') && wantsFollowUp === 'yes' && !followUpFrequency) {
+        e.followup_frequency = 'Please choose a follow-up frequency.';
+      }
+    }
+
+    if (has('followup')) {
+      if (!followupDate)            e.followup_date     = 'Please enter the original submission date.';
+      if (!followupLocation.trim()) e.followup_location = 'Please enter where the document was submitted.';
+    }
+
+    if (has('representation')) {
+      if (!repOrg.trim()) e.rep_org     = 'Organization/office is required.';
+      if (!repPurpose)    e.rep_purpose = 'Please select the representation purpose.';
+    }
+
+    if (has('retrieval')) {
+      if (!retrievalItem.trim())     e.retrieval_item     = 'Please describe what we are retrieving.';
+      if (!retrievalLocationVal.trim()) e.retrieval_location = 'Please provide the retrieval location.';
+      if (!retrievalDate)            e.retrieval_date     = 'Retrieval date is required.';
+      if (!retrievalDelivery)        e.retrieval_delivery = 'Please choose a delivery method.';
+      if (retrievalDelivery === 'home' || retrievalDelivery === 'office') {
+        if (!deliveryDistance)         e.retrieval_distance = 'Please select your distance range.';
+        if (!retrievalAddress.trim())  e.retrieval_address  = 'Delivery address is required.';
+      }
+    }
+
+    if (has('submission') || has('retrieval')) {
+      if (!isCompanyDocument) {
+        e.docCategory = 'Please select whether this is a company or personal document.';
+      }
+    }
+
+    if ((has('submission') || has('retrieval')) && isCompanyDocument === 'company') {
+      if (!companyName.trim())   e.company_name     = 'Company name is required.';
+      if (!companyCac.trim())    e.company_cac      = 'CAC registration number is required.';
+      if (!companyPosition)      e.company_position = 'Please select your position in the company.';
+      if (!companyIdCard)        e.company_idCard   = 'Please upload your office ID card.';
+      if (!companyAuthMethod)    e.company_auth     = 'Please choose an authorization method.';
+      if (companyAuthMethod === 'otp') {
+        if (!otpSent)              e.company_auth = 'Please request an OTP first.';
+        else if (!otpValue.trim()) e.company_otp  = 'Please enter the OTP you received.';
+      }
+      if (companyAuthMethod === 'letter' && !companyAuthLetter) {
+        e.company_auth = 'Please upload the signed authorization letter.';
+      }
+    }
+
+    if ((has('submission') || has('retrieval')) && isCompanyDocument) {
+      if (!authLetter)            e.auth_letter     = 'Letter of authorization is required.';
+      if (!identityType)          e.identity_type   = 'Please select an ID type.';
+      if (!identityNumber.trim()) e.identity_number = 'ID number is required.';
+      if (!identityImage)         e.identity_image  = 'Please upload your ID image.';
+      if (!identitySelfie)        e.identity_selfie = 'Please upload a selfie photo.';
+      if (!fullName.trim())       e.info_name       = 'Full name is required.';
+      if (!phone.trim())          e.info_phone      = 'Phone number is required.';
+      if (!email.trim()) {
+        e.info_email = 'Email address is required.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        e.info_email = 'Please enter a valid email address.';
+      }
+      if (!address.trim())        e.info_address    = 'Address is required.';
+    }
+
+    if (!confirmDetails)   e.confirm_details   = 'Please confirm your details are correct.';
+    if (!confirmAuthorize) e.confirm_authorize = 'Please authorize Submitar to act on your behalf.';
+
+    return e;
+  }
+
+  // Re-validate live after first submit attempt
+  useEffect(() => {
+    if (submitAttempted) {
+      setErrors(validate());
+    }
+  }, [
+    eligibility, selectedServices, receiveMethod,
+    uploadFile, docType, docText,
+    pickupAddress, pickupDate, pickupTime, pickupContact, pickupPhone,
+    submissionLocation, submissionDate, wantsFollowUp, followUpFrequency,
+    followupDate, followupLocation,
+    repOrg, repPurpose,
+    retrievalItem, retrievalLocationVal, retrievalDate,
+    retrievalDelivery, deliveryDistance, retrievalAddress,
+    isCompanyDocument, companyName, companyCac, companyPosition,
+    companyIdCard, companyAuthMethod, otpSent, otpValue, companyAuthLetter,
+    authLetter, identityType, identityNumber, identityImage, identitySelfie,
+    fullName, phone, email, address,
+    confirmDetails, confirmAuthorize,
+    submitAttempted,
+  ]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitAttempted(true);
+    const validationErrors = validate();
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      const firstErrorEl = document.querySelector('[data-error="true"]');
+      firstErrorEl?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // ✅ All valid — submit your form data here
+    console.log('Form submitted successfully');
+  };
+
+  // ─── Order summary ────────────────────────────────────────────────────────
   const { lineItems, total } = useMemo<{ lineItems: LineItem[]; total: number }>(() => {
     const items: LineItem[] = [];
-    const has = (id: string) => selectedServices.includes(id);
 
-    // Submission + Follow-up bundle
-    if (has('submission') && has('followup')) {
-      items.push({
-        label: 'Submission + 4-Week Follow-Up',
-        amount: PRICES.submission_followup_bundle,
-        note: 'Bundled rate — saves ₦50,000',
-      });
-    } else {
-      if (has('submission')) {
+    const hasExplicitFollowUp = has('followup');
+    const hasInlineFollowUp = has('submission') && wantsFollowUp === 'yes' && followUpFrequency !== '';
+
+    if (has('submission')) {
+      if (hasExplicitFollowUp || hasInlineFollowUp) {
+        const freq = hasExplicitFollowUp ? 'weekly4' : followUpFrequency;
+        if (freq === 'weekly4') {
+          items.push({ label: 'Submission + Follow-Up (Weekly × 4)', amount: PRICES.submission_followup_weekly4, note: 'Bundled — saves ₦50,000' });
+        } else if (freq === 'biweekly') {
+          items.push({ label: 'Submission + Follow-Up (Bi-weekly)', amount: PRICES.submission_followup_biweekly, note: 'Bundled — saves ₦15,000' });
+        } else if (freq === 'single') {
+          items.push({ label: 'Submission + Single Follow-Up Check', amount: PRICES.submission_followup_single, note: 'Bundled — saves ₦5,000' });
+        }
+      } else {
         items.push({ label: 'Submission Only', amount: PRICES.submission });
       }
+    } else {
       if (has('followup')) {
         items.push({ label: 'Follow-Up (Standalone)', amount: PRICES.followup_standalone });
       }
     }
 
-    // Representation
     if (has('representation')) {
       const isSpeaking = repPurpose === 'speaking';
       items.push({
@@ -83,422 +370,881 @@ export default function SubmitarForm() {
       });
     }
 
-    // Retrieval
     if (has('retrieval')) {
       items.push({ label: 'Document Retrieval', amount: PRICES.retrieval });
+      if ((retrievalDelivery === 'home' || retrievalDelivery === 'office') && deliveryDistance !== '') {
+        const fee = DELIVERY_FEES[deliveryDistance];
+        if (fee) items.push({ label: fee.label, amount: fee.amount, note: 'Distance-based delivery fee' });
+      }
     }
 
     const total = items.reduce((sum, i) => sum + i.amount, 0);
     return { lineItems: items, total };
-  }, [selectedServices, repPurpose]);
+  }, [selectedServices, repPurpose, wantsFollowUp, followUpFrequency, retrievalDelivery, deliveryDistance]);
 
-  const hasSelection = selectedServices.length > 0;
+  const sectionNum = (base: number) => {
+    // Adjust section numbers based on company document adding an extra section
+    return isCompanyDocument === 'company' ? base + 1 : base;
+  };
 
   return (
-    <div className="bg-white min-h-screen pb-20">
-      <div className="max-w-2xl mx-auto py-10 px-6 text-gray-800">
-        
-        <div className="mb-8">
-          <a href="/" className="text-blue-600 hover:underline font-medium">← Back</a>
-        </div>
+    <>
+      <Header />
 
-        <header className="mb-10 border-b pb-6">
-          <h1 className="text-3xl font-extrabold text-blue-700">
-            Submitar Service Request Form
-          </h1>
-        </header>
+      <div className="bg-white min-h-screen pb-20">
+        <div className="max-w-2xl mx-auto py-10 px-6 text-gray-800">
 
-        <form className="space-y-10">
-          
-          {/* 0. Eligibility */}
-          <div className="space-y-4">
-            <h2 className="font-bold text-lg uppercase tracking-wide underline">
-              0. Service Eligibility Check (MANDATORY)
-            </h2>
-            <p className="text-sm font-medium">
-              Is this request related to a legally mandated, court-compulsory, or government-enforced process?
-            </p>
-            
-            <div className="grid grid-cols-1 gap-3">
-              <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${eligibility === 'yes' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" checked={eligibility === 'yes'} onChange={() => setEligibility('yes')} />
-                <span>Yes, it is legally mandated / court-compulsory</span>
-              </label>
-
-              <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${eligibility === 'no' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <input type="radio" checked={eligibility === 'no'} onChange={() => setEligibility('no')} />
-                <span>No, it is a general/non-mandated service</span>
-              </label>
-            </div>
-
-            {eligibility === 'yes' && (
-              <div className="mt-6 p-6 bg-red-50 border border-red-200 rounded-2xl">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                    <MdWarning className="text-red-600 text-3xl" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-red-700 mb-2">Service Not Available</h3>
-                    <p className="text-gray-700">
-                      We are sorry. Submitar does not provide legal representative services for legally mandated, 
-                      court-compulsory, or government-enforced processes.
-                    </p>
-                    <p className="mt-3 text-gray-600">
-                      Please contact a licensed legal practitioner or the appropriate authority.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+          <div className="mb-8">
+            <a href="/" className="text-blue-600 hover:underline font-medium">← Back</a>
           </div>
 
-          {eligibility === 'no' && (
-            <>
-              {/* 1. Select Services */}
-              <div className="space-y-4 pt-4 border-t">
-                <h3 className="font-bold text-lg">1. Select Service(s)</h3>
+          <header className="mb-10 border-b pb-6">
+            <h1 className="text-3xl font-extrabold text-blue-700">
+              Submitar Service Request Form
+            </h1>
+          </header>
 
-                {/* Pricing hint cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-1">
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Submission</p>
-                    <p className="font-bold text-blue-700 text-sm">₦35,000</p>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Follow-Up</p>
-                    <p className="font-bold text-blue-700 text-sm">₦35,000</p>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Representation</p>
-                    <p className="font-bold text-blue-700 text-sm">₦50–100k</p>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide">Retrieval</p>
-                    <p className="font-bold text-blue-700 text-sm">₦35,000</p>
-                  </div>
-                </div>
+          <form className="space-y-10" onSubmit={handleSubmit} noValidate>
 
-                {/* Bundle callout */}
-                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-                  <MdLightbulb className="text-amber-500 text-base shrink-0" />
-                  <span><strong>Bundle deal:</strong> Select both Submission + Follow-up and pay just ₦120,000 (saves ₦50,000)</span>
-                </div>
+            {/* ── 0. Eligibility ─────────────────────────────────────────── */}
+            <div className="space-y-4">
+              <h2 className="font-bold text-lg uppercase tracking-wide underline">
+                0. Service Eligibility Check (MANDATORY)
+              </h2>
+              <p className="text-sm font-medium">
+                Is this request related to a legally mandated, court-compulsory, or government-enforced process?
+              </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {services.map((service) => {
-                    const Icon = service.icon;
-                    return (
-                      <label key={service.id} className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${selectedServices.includes(service.id) ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                        <input type="checkbox" checked={selectedServices.includes(service.id)} onChange={() => toggleService(service.id)} />
-                        <div className="flex items-center gap-2">
-                          <Icon className="text-xl text-blue-600" />
-                          <span className="font-medium">{service.label}</span>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
+              <div className="grid grid-cols-1 gap-3" data-error={!!errors.eligibility}>
+                <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${eligibility === 'yes' ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" checked={eligibility === 'yes'} onChange={() => setEligibility('yes')} />
+                  <span>Yes, it is legally mandated / court-compulsory</span>
+                </label>
+                <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${eligibility === 'no' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" checked={eligibility === 'no'} onChange={() => setEligibility('no')} />
+                  <span>No, it is a general/non-mandated service</span>
+                </label>
               </div>
+              <FieldError msg={errors.eligibility} />
 
-              {/* 2. Receive Document - Tabbed */}
-              {selectedServices.includes('submission') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">2. How Should We Receive Your Document?</h3>
-                  <div className="flex border-b border-gray-200">
-                    <button type="button" onClick={() => setReceiveMethod('upload')} className={`flex-1 py-3 text-sm font-medium border-b-2 flex items-center justify-center gap-2 ${receiveMethod === 'upload' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                      <MdUpload className="text-lg" /> Upload Document
-                    </button>
-                    <button type="button" onClick={() => setReceiveMethod('text')} className={`flex-1 py-3 text-sm font-medium border-b-2 flex items-center justify-center gap-2 ${receiveMethod === 'text' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                      <MdTextFields className="text-lg" /> Send Text for Typesetting
-                    </button>
-                    <button type="button" onClick={() => setReceiveMethod('hardcopy')} className={`flex-1 py-3 text-sm font-medium border-b-2 flex items-center justify-center gap-2 ${receiveMethod === 'hardcopy' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                      <MdLocalShipping className="text-lg" /> Hardcopy Pickup
-                    </button>
-                  </div>
-
-                  <div className="pt-4">
-                    {receiveMethod === 'upload' && (
-                      <div className="space-y-3">
-                        <label className="text-xs font-bold block">Upload File(s)</label>
-                        <input type="file" className="w-full border p-2" />
-                        <input type="text" placeholder="Description" className="w-full border p-2 text-sm" />
-                      </div>
-                    )}
-                    {receiveMethod === 'text' && (
-                      <div className="space-y-4">
-                        <input type="text" placeholder="Type of Document (Letter, CV, etc.)" className="w-full border p-2 text-sm" />
-                        <textarea placeholder="Paste Text Here" className="w-full border p-2 text-sm" rows={5}></textarea>
-                        <p className="text-xs font-bold">Formatting Style:</p>
-                        <div className="flex gap-6">
-                          <label className="flex items-center gap-2"><input type="radio" name="style" /> Formal</label>
-                          <label className="flex items-center gap-2"><input type="radio" name="style" /> Simple</label>
-                          <label className="flex items-center gap-2"><input type="radio" name="style" /> Professional</label>
-                        </div>
-                      </div>
-                    )}
-                    {receiveMethod === 'hardcopy' && (
-                      <div className="space-y-3 flex flex-col">
-                        <input type="text" placeholder="Pickup Address" className="w-full border p-2 text-sm" />
-                        <input type="date" className="w-full border p-2 text-sm" />
-                        <input type="time" className="w-full border p-2 text-sm" />
-                        <input type="text" placeholder="Contact Person Name" className="w-full border p-2 text-sm" />
-                        <input type="tel" placeholder="Phone Number" className="w-full border p-2 text-sm" />
-                        <input type="number" placeholder="Number of Documents" className="w-full border p-2 text-sm" />
-                        <textarea placeholder="Instructions" className="w-full border p-2 text-sm" rows={3}></textarea>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* 3. Submission Details */}
-              {selectedServices.includes('submission') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">3. Submission Details</h3>
-                  <input type="text" placeholder="Submission Location (Office/Agency)" className="w-full border p-3 text-sm" />
-                  <input type="date" className="w-full border p-3 text-sm" />
-                  <textarea placeholder="Special Instructions" className="w-full border p-3 text-sm"></textarea>
-                </div>
-              )}
-
-              {/* 4. Follow-up */}
-              {selectedServices.includes('followup') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">4. Follow-up Details</h3>
-                  <input type="date" placeholder="When was the document submitted?" className="w-full border p-3 text-sm" />
-                  <input type="text" placeholder="Where was it submitted?" className="w-full border p-3 text-sm" />
-                  <input type="text" placeholder="What is the last update/status?" className="w-full border p-3 text-sm" />
-                  <input type="text" placeholder="Reference Number (if any)" className="w-full border p-3 text-sm" />
-                </div>
-              )}
-
-              {/* 5. Representation */}
-              {selectedServices.includes('representation') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">5. Representation Details</h3>
-                  <input type="text" placeholder="Organization/Office" className="w-full border p-3 text-sm" />
-                  <p className="text-sm font-bold">Preferred Representative:</p>
-                  <div className="flex gap-6">
-                    <label><input type="radio" name="rep" /> Male</label>
-                    <label><input type="radio" name="rep" /> Female</label>
-                    <label><input type="radio" name="rep" /> No preference</label>
-                  </div>
-                  <p className="text-sm font-bold">Purpose:</p>
-                  <div className="flex gap-6">
-                    <label className="flex items-center gap-2">
-                      <input 
-                        type="radio" 
-                        name="purpose" 
-                        checked={repPurpose === 'attendance'}
-                        onChange={() => setRepPurpose('attendance')}
-                      /> 
-                      Attendance only
-                      <span className="text-xs text-blue-600 font-semibold ml-1">(₦50,000)</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input 
-                        type="radio" 
-                        name="purpose" 
-                        checked={repPurpose === 'speaking'}
-                        onChange={() => setRepPurpose('speaking')}
-                      /> 
-                      Representation + Speaking
-                      <span className="text-xs text-blue-600 font-semibold ml-1">(₦100,000)</span>
-                    </label>
-                  </div>
-                  {repPurpose === 'speaking' && (
-                    <>
-                      <input type="text" placeholder="If Speaking: Topic/Subject" className="w-full border p-3 text-sm" />
-                      <textarea placeholder="Breakdown of what to say" className="w-full border p-3 text-sm" rows={3}></textarea>
-                      <input type="file" className="w-full border p-2" />
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* 6. Retrieval */}
-              {selectedServices.includes('retrieval') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">6. Retrieval Details</h3>
-                  <input type="text" placeholder="What are we retrieving?" className="w-full border p-3 text-sm" />
-                  <input type="text" placeholder="Location" className="w-full border p-3 text-sm" />
-                  <input type="date" placeholder="When was it submitted?" className="w-full border p-3 text-sm" />
-                  <input type="text" placeholder="Last update/status" className="w-full border p-3 text-sm" />
-                  <p className="text-sm font-bold">Delivery Method:</p>
-                  <div className="flex gap-6">
-                    <label><input type="radio" name="retrieval" /> Home Delivery</label>
-                    <label><input type="radio" name="retrieval" /> Office Delivery</label>
-                    <label><input type="radio" name="retrieval" /> Pickup</label>
-                  </div>
-                </div>
-              )}
-
-              {/* 7. Company or Personal Document */}
-              {hasSelection && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">7. Document Category</h3>
-                  <p className="text-sm">Is this a Company Document or Personal Document?</p>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer ${isCompanyDocument === 'company' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>
-                      <input type="radio" name="docCategory" checked={isCompanyDocument === 'company'} onChange={() => setIsCompanyDocument('company')} />
-                      <span>Company Document</span>
-                    </label>
-                    <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer ${isCompanyDocument === 'personal' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>
-                      <input type="radio" name="docCategory" checked={isCompanyDocument === 'personal'} onChange={() => setIsCompanyDocument('personal')} />
-                      <span>Personal / Individual Document</span>
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {/* 7a. Company Verification */}
-              {isCompanyDocument === 'company' && (
-                <div className="space-y-4 pt-4 border-t bg-gray-50 p-4 rounded">
-                  <h3 className="font-bold text-lg flex items-center gap-2">
-                    <FaBuilding /> Company Verification
-                  </h3>
-                  <input type="text" placeholder="Company Name" className="w-full border p-3 text-sm bg-white" />
-                  <input type="text" placeholder="Company Registration Number (CAC)" className="w-full border p-3 text-sm bg-white" />
-                  
-                  <p className="text-sm font-bold">Your Position in the Company:</p>
-                  <div className="flex flex-wrap gap-6">
-                    <label className="flex items-center gap-2"><input type="radio" name="pos" /> Director</label>
-                    <label className="flex items-center gap-2"><input type="radio" name="pos" /> Manager</label>
-                    <label className="flex items-center gap-2"><input type="radio" name="pos" /> Staff</label>
-                    <label className="flex items-center gap-2"><input type="radio" name="pos" /> Other</label>
-                  </div>
-                  
-                  <label className="text-xs font-bold block">Upload Office ID Card</label>
-                  <input type="file" className="w-full border p-2 bg-white" />
-
-                  <p className="font-bold text-sm underline pt-4">Company Authorization Method</p>
-                  <label className="flex items-center gap-2"><input type="radio" name="c-auth" /> Verify via Company OTP (Fast Track)</label>
-                  <div className="pl-6 space-y-2">
-                    <input type="tel" placeholder="Company Phone Number" className="w-full border p-2 text-sm bg-white" />
-                    <button type="button" className="bg-blue-600 text-white px-4 py-2 text-xs rounded">Send OTP</button>
-                    <input type="text" placeholder="Enter OTP" className="w-full border p-2 text-sm bg-white" />
-                  </div>
-                  <label className="flex items-center gap-2 mt-4"><input type="radio" name="c-auth" /> Upload Signed/Stamped Authorization</label>
-                  <div className="pl-6">
-                    <input type="file" className="w-full border p-2 bg-white" />
-                  </div>
-                </div>
-              )}
-
-              {/* Authorization & Identity */}
-              {(isCompanyDocument === 'company' || isCompanyDocument === 'personal') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">
-                    {isCompanyDocument === 'company' ? '8' : '7'}. Authorization & Identity Verification (REQUIRED)
-                  </h3>
-                  <p className="text-sm font-bold">Letter of Authorization:</p>
-                  <input type="file" className="w-full border p-2" />
-                  
-                  <p className="text-sm font-bold">Identity Verification:</p>
-                  <select className="w-full border p-3 text-sm">
-                    <option>Select ID Type...</option>
-                    <option>NIN</option>
-                    <option>International Passport</option>
-                  </select>
-                  <input type="text" placeholder="ID Number" className="w-full border p-3 text-sm" />
-                  <label className="text-xs font-bold block">Upload ID Image</label>
-                  <input type="file" className="w-full border p-2" />
-                  <label className="text-xs font-bold block">Upload Your Photo (Selfie)</label>
-                  <input type="file" className="w-full border p-2" />
-                </div>
-              )}
-
-              {/* Personal Information */}
-              {(isCompanyDocument === 'company' || isCompanyDocument === 'personal') && (
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="font-bold text-lg">
-                    {isCompanyDocument === 'company' ? '9' : '8'}. Your Information
-                  </h3>
-                  <input type="text" placeholder="Full Name" className="w-full border p-3 text-sm" />
-                  <input type="tel" placeholder="Phone Number" className="w-full border p-3 text-sm" />
-                  <input type="email" placeholder="Email" className="w-full border p-3 text-sm" />
-                  <input type="text" placeholder="Address" className="w-full border p-3 text-sm" />
-                </div>
-              )}
-
-              {/* ── ORDER SUMMARY ──────────────────────────────────────────────────────── */}
-              {lineItems.length > 0 && (
-                <div className="pt-6 border-t">
-                  <div className="rounded-2xl border border-blue-100 overflow-hidden shadow-sm">
-                    {/* Header */}
-                    <div className="bg-[#0052cc] px-6 py-4 flex items-center justify-between">
-                      <h3 className="font-extrabold text-white text-lg tracking-tight">
-                        10. Order Summary
-                      </h3>
-                      <span className="text-blue-200 text-xs uppercase tracking-widest font-semibold">Estimate</span>
+              {eligibility === 'yes' && (
+                <div className="mt-6 p-6 bg-red-50 border border-red-200 rounded-2xl">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <MdWarning className="text-red-600 text-3xl" />
                     </div>
-
-                    {/* Line items */}
-                    <div className="bg-white divide-y divide-gray-100">
-                      {lineItems.map((item, i) => (
-                        <div key={i} className="px-6 py-4 flex items-start justify-between gap-4">
-                          <div>
-                            <p className="font-semibold text-gray-800 text-sm">{item.label}</p>
-                            {item.note && (
-                              <p className="text-xs text-green-600 font-medium mt-0.5">{item.note}</p>
-                            )}
-                          </div>
-                          <p className="font-bold text-gray-900 text-sm whitespace-nowrap">{fmt(item.amount)}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Total */}
-                    <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Estimated Total</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">Final price confirmed after review</p>
-                      </div>
-                      <p className="text-2xl font-extrabold text-[#0052cc]">{fmt(total)}</p>
-                    </div>
-
-                    <div className="bg-blue-50 px-6 py-3 border-t border-blue-100">
-                      <p className="text-xs text-blue-700 font-medium flex items-center gap-2">
-                        <MdCreditCard className="text-blue-500 text-sm shrink-0" />
-                        Payment instructions will be shared after your request is reviewed. No upfront payment required to submit.
+                    <div>
+                      <h3 className="text-xl font-bold text-red-700 mb-2">Service Not Available</h3>
+                      <p className="text-gray-700">
+                        We are sorry. Submitar does not provide legal representative services for legally mandated,
+                        court-compulsory, or government-enforced processes.
+                      </p>
+                      <p className="mt-3 text-gray-600">
+                        Please contact a licensed legal practitioner or the appropriate authority.
                       </p>
                     </div>
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* Confirmation */}
-              <div className="space-y-4 pt-8 border-t">
-                <label className="flex items-center gap-3 p-2 border border-gray-100 rounded">
-                  <input type="checkbox" />
-                  <span className="text-sm font-medium">
-                    {lineItems.length > 0 ? '11' : '10'}. Save this request for future recall
-                  </span>
-                </label>
-                
-                <div className="space-y-2 bg-blue-50 p-4 rounded">
-                  <p className="text-sm font-bold">
-                    {lineItems.length > 0 ? '12' : '11'}. Confirmation
-                  </p>
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" required />
-                    <span className="text-sm">I confirm all details are correct</span>
-                  </label>
-                  <label className="flex items-center gap-3">
-                    <input type="checkbox" required />
-                    <span className="text-sm">I authorize Submitar to act on my behalf</span>
-                  </label>
+            {eligibility === 'no' && (
+              <>
+                {/* ── 1. Select Services ────────────────────────────────── */}
+                <div className="space-y-4 pt-4 border-t">
+                  <h3 className="font-bold text-lg">1. Select Service(s)</h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { label: 'Submission',      price: '₦35,000' },
+                      { label: 'Follow-Up',        price: '₦35,000' },
+                      { label: 'Representation',   price: '₦50–100k' },
+                      { label: 'Retrieval',        price: '₦35,000' },
+                    ].map(h => (
+                      <div key={h.label} className="bg-blue-50 border border-blue-100 rounded-lg p-2 text-center">
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wide">{h.label}</p>
+                        <p className="font-bold text-blue-700 text-sm">{h.price}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                    <MdLightbulb className="text-amber-500 text-base shrink-0" />
+                    <span><strong>Bundle deal:</strong> Select both Submission + Follow-up and pay just ₦120,000 (saves ₦50,000)</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-error={!!errors.services}>
+                    {services.map(service => {
+                      const Icon = service.icon;
+                      return (
+                        <label key={service.id} className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-all ${has(service.id) ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                          <input type="checkbox" checked={has(service.id)} onChange={() => toggleService(service.id)} />
+                          <div className="flex items-center gap-2">
+                            <Icon className="text-xl text-blue-600" />
+                            <span className="font-medium">{service.label}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <FieldError msg={errors.services} />
                 </div>
-                
-                <button type="submit" className="w-full bg-blue-700 text-white font-bold py-5 rounded-lg text-xl hover:bg-blue-800 transition-colors shadow-lg">
-                  Submit Request
-                </button>
-              </div>
-            </>
-          )}
-        </form>
+
+                {/* ── 2. Receive Document ───────────────────────────────── */}
+                {has('submission') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">2. How Should We Receive Your Document?</h3>
+                    <div className="flex border-b border-gray-200">
+                      {[
+                        { id: 'upload',   label: 'Upload Document',           Icon: MdUpload },
+                        { id: 'text',     label: 'Send Text for Typesetting',  Icon: MdTextFields },
+                        { id: 'hardcopy', label: 'Hardcopy Pickup',            Icon: MdLocalShipping },
+                      ].map(tab => (
+                        <button key={tab.id} type="button"
+                          onClick={() => setReceiveMethod(tab.id as typeof receiveMethod)}
+                          className={`flex-1 py-3 text-sm font-medium border-b-2 flex items-center justify-center gap-2 ${receiveMethod === tab.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+                          <tab.Icon className="text-lg" /> {tab.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="pt-4">
+                      {receiveMethod === 'upload' && (
+                        <div className="space-y-3">
+                          <label className="text-xs font-bold block">Upload File(s)</label>
+                          <input
+                            type="file"
+                            data-error={!!errors.receiveMethod_file}
+                            onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
+                            className={`w-full border p-2 ${errBorder(errors.receiveMethod_file)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_file} />
+                          <input
+                            type="text"
+                            placeholder="Description"
+                            value={uploadDesc}
+                            onChange={e => setUploadDesc(e.target.value)}
+                            className="w-full border p-2 text-sm"
+                          />
+                        </div>
+                      )}
+
+                      {receiveMethod === 'text' && (
+                        <div className="space-y-4">
+                          <input
+                            type="text"
+                            placeholder="Type of Document (Letter, CV, etc.)"
+                            value={docType}
+                            onChange={e => setDocType(e.target.value)}
+                            data-error={!!errors.receiveMethod_docType}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_docType)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_docType} />
+                          <textarea
+                            placeholder="Paste Text Here"
+                            value={docText}
+                            onChange={e => setDocText(e.target.value)}
+                            data-error={!!errors.receiveMethod_text}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_text)}`}
+                            rows={5}
+                          />
+                          <FieldError msg={errors.receiveMethod_text} />
+                          <p className="text-xs font-bold">Formatting Style:</p>
+                          <div className="flex gap-6">
+                            {['Formal', 'Simple', 'Professional'].map(s => (
+                              <label key={s} className="flex items-center gap-2">
+                                <input type="radio" name="style" checked={formattingStyle === s} onChange={() => setFormattingStyle(s)} /> {s}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {receiveMethod === 'hardcopy' && (
+                        <div className="space-y-3 flex flex-col">
+                          <input
+                            type="text"
+                            placeholder="Pickup Address"
+                            value={pickupAddress}
+                            onChange={e => setPickupAddress(e.target.value)}
+                            data-error={!!errors.receiveMethod_pickupAddress}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_pickupAddress)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_pickupAddress} />
+                          <input
+                            type="date"
+                            value={pickupDate}
+                            onChange={e => setPickupDate(e.target.value)}
+                            data-error={!!errors.receiveMethod_pickupDate}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_pickupDate)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_pickupDate} />
+                          <input
+                            type="time"
+                            value={pickupTime}
+                            onChange={e => setPickupTime(e.target.value)}
+                            data-error={!!errors.receiveMethod_pickupTime}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_pickupTime)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_pickupTime} />
+                          <input
+                            type="text"
+                            placeholder="Contact Person Name"
+                            value={pickupContact}
+                            onChange={e => setPickupContact(e.target.value)}
+                            data-error={!!errors.receiveMethod_pickupContact}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_pickupContact)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_pickupContact} />
+                          <input
+                            type="tel"
+                            placeholder="Phone Number"
+                            value={pickupPhone}
+                            onChange={e => setPickupPhone(e.target.value)}
+                            data-error={!!errors.receiveMethod_pickupPhone}
+                            className={`w-full border p-2 text-sm ${errBorder(errors.receiveMethod_pickupPhone)}`}
+                          />
+                          <FieldError msg={errors.receiveMethod_pickupPhone} />
+                          <input
+                            type="number"
+                            placeholder="Number of Documents"
+                            value={pickupNumDocs}
+                            onChange={e => setPickupNumDocs(e.target.value)}
+                            className="w-full border p-2 text-sm"
+                          />
+                          <textarea
+                            placeholder="Instructions"
+                            value={pickupInstructions}
+                            onChange={e => setPickupInstructions(e.target.value)}
+                            className="w-full border p-2 text-sm"
+                            rows={3}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── 3. Submission Details + inline follow-up ──────────── */}
+                {has('submission') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">3. Submission Details</h3>
+                    <input
+                      type="text"
+                      placeholder="Submission Location (Office/Agency)"
+                      value={submissionLocation}
+                      onChange={e => setSubmissionLocation(e.target.value)}
+                      data-error={!!errors.submission_location}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.submission_location)}`}
+                    />
+                    <FieldError msg={errors.submission_location} />
+                    <input
+                      type="date"
+                      value={submissionDate}
+                      onChange={e => setSubmissionDate(e.target.value)}
+                      data-error={!!errors.submission_date}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.submission_date)}`}
+                    />
+                    <FieldError msg={errors.submission_date} />
+                    <textarea
+                      placeholder="Special Instructions"
+                      value={submissionInstructions}
+                      onChange={e => setSubmissionInstructions(e.target.value)}
+                      className="w-full border p-3 text-sm"
+                    />
+
+                    {!has('followup') && (
+                      <div className="mt-2 border border-blue-100 rounded-xl p-4 bg-blue-50 space-y-4">
+                        <div>
+                          <p className="font-bold text-sm text-gray-800">Would you like us to follow up on this submission?</p>
+                          <p className="text-xs text-gray-500 mt-0.5">We track progress and send you updates after submission.</p>
+                        </div>
+
+                        <div className="flex gap-3">
+                          <label className={`flex-1 flex items-center justify-center p-3 border rounded-lg cursor-pointer text-sm font-semibold transition-all ${wantsFollowUp === 'yes' ? 'border-blue-600 bg-white text-blue-700' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'}`}>
+                            <input type="radio" name="inlineFollowup" className="hidden" checked={wantsFollowUp === 'yes'} onChange={() => setWantsFollowUp('yes')} />
+                            Yes, follow up for me
+                          </label>
+                          <label className={`flex-1 flex items-center justify-center p-3 border rounded-lg cursor-pointer text-sm font-semibold transition-all ${wantsFollowUp === 'no' ? 'border-gray-400 bg-white text-gray-700' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}`}>
+                            <input type="radio" name="inlineFollowup" className="hidden" checked={wantsFollowUp === 'no'} onChange={() => { setWantsFollowUp('no'); setFollowUpFrequency(''); }} />
+                            No, not needed
+                          </label>
+                        </div>
+
+                        {wantsFollowUp === 'yes' && (
+                          <div className="space-y-2 pt-1" data-error={!!errors.followup_frequency}>
+                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">How often should we check in?</p>
+                            <div className="grid grid-cols-1 gap-2">
+                              {[
+                                { id: 'weekly4',  title: 'Weekly — 4 Weeks',       sub: 'Update every week for a month',     price: '₦120,000', saving: 'Saves ₦50,000' },
+                                { id: 'biweekly', title: 'Bi-weekly — 2 Checks',   sub: 'Update every two weeks',            price: '₦90,000',  saving: 'Saves ₦15,000' },
+                                { id: 'single',   title: 'Single Check',            sub: 'One status check after submission', price: '₦65,000',  saving: 'Saves ₦5,000'  },
+                              ].map(opt => (
+                                <label key={opt.id} className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all bg-white ${followUpFrequency === opt.id ? 'border-blue-600' : 'border-gray-200 hover:border-gray-300'}`}>
+                                  <div className="flex items-center gap-3">
+                                    <input type="radio" name="followupFreq" checked={followUpFrequency === opt.id} onChange={() => setFollowUpFrequency(opt.id)} />
+                                    <div>
+                                      <p className="text-sm font-semibold text-gray-800">{opt.title}</p>
+                                      <p className="text-xs text-gray-500">{opt.sub}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm font-bold text-blue-700">{opt.price}</p>
+                                    <p className="text-[10px] text-green-600 font-medium">{opt.saving}</p>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                            <FieldError msg={errors.followup_frequency} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── 4. Follow-up Details ──────────────────────────────── */}
+                {has('followup') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">4. Follow-up Details</h3>
+                    <input
+                      type="date"
+                      placeholder="When was the document submitted?"
+                      value={followupDate}
+                      onChange={e => setFollowupDate(e.target.value)}
+                      data-error={!!errors.followup_date}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.followup_date)}`}
+                    />
+                    <FieldError msg={errors.followup_date} />
+                    <input
+                      type="text"
+                      placeholder="Where was it submitted?"
+                      value={followupLocation}
+                      onChange={e => setFollowupLocation(e.target.value)}
+                      data-error={!!errors.followup_location}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.followup_location)}`}
+                    />
+                    <FieldError msg={errors.followup_location} />
+                    <input
+                      type="text"
+                      placeholder="What is the last update/status?"
+                      value={followupStatus}
+                      onChange={e => setFollowupStatus(e.target.value)}
+                      className="w-full border p-3 text-sm"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Reference Number (if any)"
+                      value={followupRef}
+                      onChange={e => setFollowupRef(e.target.value)}
+                      className="w-full border p-3 text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* ── 5. Representation ─────────────────────────────────── */}
+                {has('representation') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">5. Representation Details</h3>
+                    <input
+                      type="text"
+                      placeholder="Organization/Office"
+                      value={repOrg}
+                      onChange={e => setRepOrg(e.target.value)}
+                      data-error={!!errors.rep_org}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.rep_org)}`}
+                    />
+                    <FieldError msg={errors.rep_org} />
+                    <p className="text-sm font-bold">Preferred Representative:</p>
+                    <div className="flex gap-6">
+                      {['Male', 'Female', 'No preference'].map(g => (
+                        <label key={g} className="flex items-center gap-2">
+                          <input type="radio" name="rep" checked={repGender === g} onChange={() => setRepGender(g)} /> {g}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-sm font-bold">Purpose:</p>
+                    <div className="flex gap-6" data-error={!!errors.rep_purpose}>
+                      <label className="flex items-center gap-2">
+                        <input type="radio" name="purpose" checked={repPurpose === 'attendance'} onChange={() => setRepPurpose('attendance')} />
+                        Attendance only
+                        <span className="text-xs text-blue-600 font-semibold ml-1">(₦50,000)</span>
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input type="radio" name="purpose" checked={repPurpose === 'speaking'} onChange={() => setRepPurpose('speaking')} />
+                        Representation + Speaking
+                        <span className="text-xs text-blue-600 font-semibold ml-1">(₦100,000)</span>
+                      </label>
+                    </div>
+                    <FieldError msg={errors.rep_purpose} />
+                    {repPurpose === 'speaking' && (
+                      <>
+                        <input
+                          type="text"
+                          placeholder="Topic/Subject"
+                          value={repTopic}
+                          onChange={e => setRepTopic(e.target.value)}
+                          className="w-full border p-3 text-sm"
+                        />
+                        <textarea
+                          placeholder="Breakdown of what to say"
+                          value={repScript}
+                          onChange={e => setRepScript(e.target.value)}
+                          className="w-full border p-3 text-sm"
+                          rows={3}
+                        />
+                        <input
+                          type="file"
+                          onChange={e => setRepFile(e.target.files?.[0] ?? null)}
+                          className="w-full border p-2"
+                        />
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* ── 6. Retrieval ──────────────────────────────────────── */}
+                {has('retrieval') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">6. Retrieval Details</h3>
+                    <input
+                      type="text"
+                      placeholder="What are we retrieving?"
+                      value={retrievalItem}
+                      onChange={e => setRetrievalItem(e.target.value)}
+                      data-error={!!errors.retrieval_item}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.retrieval_item)}`}
+                    />
+                    <FieldError msg={errors.retrieval_item} />
+                    <input
+                      type="text"
+                      placeholder="Location (where it currently is)"
+                      value={retrievalLocationVal}
+                      onChange={e => setRetrievalLocationVal(e.target.value)}
+                      data-error={!!errors.retrieval_location}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.retrieval_location)}`}
+                    />
+                    <FieldError msg={errors.retrieval_location} />
+                    <input
+                      type="date"
+                      value={retrievalDate}
+                      onChange={e => setRetrievalDate(e.target.value)}
+                      data-error={!!errors.retrieval_date}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.retrieval_date)}`}
+                    />
+                    <FieldError msg={errors.retrieval_date} />
+                    <input
+                      type="text"
+                      placeholder="Last update/status"
+                      value={retrievalStatus}
+                      onChange={e => setRetrievalStatus(e.target.value)}
+                      className="w-full border p-3 text-sm"
+                    />
+
+                    <p className="text-sm font-bold">How would you like to receive your document?</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3" data-error={!!errors.retrieval_delivery}>
+                      {[
+                        { id: 'home',   label: 'Home Delivery' },
+                        { id: 'office', label: 'Office Delivery' },
+                        { id: 'pickup', label: 'Pickup' },
+                      ].map(opt => (
+                        <label key={opt.id} className={`flex items-center gap-3 p-3 border rounded-xl cursor-pointer transition-all ${retrievalDelivery === opt.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                          <input
+                            type="radio"
+                            name="retrieval"
+                            checked={retrievalDelivery === opt.id}
+                            onChange={() => { setRetrievalDelivery(opt.id); setDeliveryDistance(''); }}
+                          />
+                          <span className="text-sm font-medium">{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <FieldError msg={errors.retrieval_delivery} />
+
+                    {(retrievalDelivery === 'home' || retrievalDelivery === 'office') && (
+                      <div className="space-y-3 pt-2">
+                        <input
+                          type="text"
+                          placeholder={retrievalDelivery === 'home' ? 'Home delivery address' : 'Office delivery address'}
+                          value={retrievalAddress}
+                          onChange={e => setRetrievalAddress(e.target.value)}
+                          data-error={!!errors.retrieval_address}
+                          className={`w-full border p-3 text-sm ${errBorder(errors.retrieval_address)}`}
+                        />
+                        <FieldError msg={errors.retrieval_address} />
+
+                        <div data-error={!!errors.retrieval_distance}>
+                          <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Approximate distance from retrieval point</p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {[
+                              { id: 'within5', label: '0 – 5 km',   fee: '₦2,000'  },
+                              { id: '5to15',   label: '5 – 15 km',  fee: '₦5,000'  },
+                              { id: '15to30',  label: '15 – 30 km', fee: '₦10,000' },
+                              { id: 'above30', label: '30+ km',     fee: '₦15,000' },
+                            ].map(d => (
+                              <label key={d.id} className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${deliveryDistance === d.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type="radio"
+                                    name="deliveryDist"
+                                    checked={deliveryDistance === d.id}
+                                    onChange={() => setDeliveryDistance(d.id)}
+                                  />
+                                  <span className="text-sm font-medium text-gray-800">{d.label}</span>
+                                </div>
+                                <span className="text-sm font-bold text-blue-700">{d.fee}</span>
+                              </label>
+                            ))}
+                          </div>
+                          <FieldError msg={errors.retrieval_distance} />
+                          <p className="text-[10px] text-gray-400 mt-1">Delivery fee is added to your order total.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {retrievalDelivery === 'pickup' && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                        <p className="text-xs text-gray-600 font-medium">You will be notified when your document is ready for pickup. No delivery fee applies.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── 7. Document Category ──────────────────────────────── */}
+                {(has('submission') || has('retrieval')) && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">7. Document Category</h3>
+                    <p className="text-sm">Is this a Company Document or Personal Document?</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-error={!!errors.docCategory}>
+                      <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer ${isCompanyDocument === 'company' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>
+                        <input type="radio" name="docCategory" checked={isCompanyDocument === 'company'} onChange={() => setIsCompanyDocument('company')} />
+                        <span>Company Document</span>
+                      </label>
+                      <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer ${isCompanyDocument === 'personal' ? 'border-blue-600 bg-blue-50' : 'border-gray-200'}`}>
+                        <input type="radio" name="docCategory" checked={isCompanyDocument === 'personal'} onChange={() => setIsCompanyDocument('personal')} />
+                        <span>Personal / Individual Document</span>
+                      </label>
+                    </div>
+                    <FieldError msg={errors.docCategory} />
+                  </div>
+                )}
+
+                {/* ── 7a. Company Verification ──────────────────────────── */}
+                {(has('submission') || has('retrieval')) && isCompanyDocument === 'company' && (
+                  <div className="space-y-4 pt-4 border-t bg-gray-50 p-4 rounded">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <FaBuilding /> Company Verification
+                    </h3>
+                    <input
+                      type="text"
+                      placeholder="Company Name"
+                      value={companyName}
+                      onChange={e => setCompanyName(e.target.value)}
+                      data-error={!!errors.company_name}
+                      className={`w-full border p-3 text-sm bg-white ${errBorder(errors.company_name)}`}
+                    />
+                    <FieldError msg={errors.company_name} />
+                    <input
+                      type="text"
+                      placeholder="Company Registration Number (CAC)"
+                      value={companyCac}
+                      onChange={e => setCompanyCac(e.target.value)}
+                      data-error={!!errors.company_cac}
+                      className={`w-full border p-3 text-sm bg-white ${errBorder(errors.company_cac)}`}
+                    />
+                    <FieldError msg={errors.company_cac} />
+
+                    <p className="text-sm font-bold">Your Position in the Company:</p>
+                    <div className="flex flex-wrap gap-6" data-error={!!errors.company_position}>
+                      {['Director', 'Manager', 'Staff', 'Other'].map(pos => (
+                        <label key={pos} className="flex items-center gap-2">
+                          <input type="radio" name="pos" checked={companyPosition === pos} onChange={() => setCompanyPosition(pos)} /> {pos}
+                        </label>
+                      ))}
+                    </div>
+                    <FieldError msg={errors.company_position} />
+
+                    <label className="text-xs font-bold block">Upload Office ID Card</label>
+                    <input
+                      type="file"
+                      data-error={!!errors.company_idCard}
+                      onChange={e => setCompanyIdCard(e.target.files?.[0] ?? null)}
+                      className={`w-full border p-2 bg-white ${errBorder(errors.company_idCard)}`}
+                    />
+                    <FieldError msg={errors.company_idCard} />
+
+                    <p className="font-bold text-sm underline pt-4">Company Authorization Method</p>
+                    <div data-error={!!errors.company_auth}>
+                      <label className="flex items-center gap-2 font-medium text-sm">
+                        <input
+                          type="radio"
+                          name="c-auth"
+                          checked={companyAuthMethod === 'otp'}
+                          onChange={() => { setCompanyAuthMethod('otp'); setOtpSent(null); }}
+                        />
+                        Verify via OTP (pulled from CAC records)
+                      </label>
+                      {companyAuthMethod === 'otp' && (
+                        <div className="pl-6 space-y-3 mt-2">
+                          <p className="text-xs text-gray-500">
+                            Your registered contact details will be retrieved automatically from the CAC database using your registration number above.
+                          </p>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setOtpSent('email')}
+                              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border text-sm font-semibold transition-all ${otpSent === 'email' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'}`}
+                            >
+                              <MdEmail className="text-base" /> Get OTP via Email
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setOtpSent('mobile')}
+                              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border text-sm font-semibold transition-all ${otpSent === 'mobile' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'}`}
+                            >
+                              <MdPhone className="text-base" /> Get OTP via Mobile
+                            </button>
+                          </div>
+                          {otpSent && (
+                            <div className="space-y-2">
+                              <p className="text-xs text-green-700 font-medium">
+                                OTP sent to your CAC-registered {otpSent === 'email' ? 'email address' : 'mobile number'}.
+                              </p>
+                              <input
+                                type="text"
+                                placeholder="Enter OTP"
+                                value={otpValue}
+                                onChange={e => setOtpValue(e.target.value)}
+                                data-error={!!errors.company_otp}
+                                className={`w-full border p-2 text-sm bg-white ${errBorder(errors.company_otp)}`}
+                              />
+                              <FieldError msg={errors.company_otp} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <label className="flex items-center gap-2 mt-4 font-medium text-sm">
+                        <input
+                          type="radio"
+                          name="c-auth"
+                          checked={companyAuthMethod === 'letter'}
+                          onChange={() => { setCompanyAuthMethod('letter'); setOtpSent(null); }}
+                        />
+                        Upload Signed / Stamped Authorization Letter
+                      </label>
+                      {companyAuthMethod === 'letter' && (
+                        <div className="pl-6 mt-2">
+                          <input
+                            type="file"
+                            onChange={e => setCompanyAuthLetter(e.target.files?.[0] ?? null)}
+                            className="w-full border p-2 bg-white"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <FieldError msg={errors.company_auth} />
+                  </div>
+                )}
+
+                {/* ── Authorization & Identity ───────────────────────────── */}
+                {(has('submission') || has('retrieval')) && (isCompanyDocument === 'company' || isCompanyDocument === 'personal') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">
+                      {isCompanyDocument === 'company' ? '8' : '7'}. Authorization & Identity Verification (REQUIRED)
+                    </h3>
+                    <p className="text-sm font-bold">Letter of Authorization:</p>
+                    <input
+                      type="file"
+                      data-error={!!errors.auth_letter}
+                      onChange={e => setAuthLetter(e.target.files?.[0] ?? null)}
+                      className={`w-full border p-2 ${errBorder(errors.auth_letter)}`}
+                    />
+                    <FieldError msg={errors.auth_letter} />
+
+                    <p className="text-sm font-bold">Identity Verification:</p>
+                    <select
+                      value={identityType}
+                      onChange={e => setIdentityType(e.target.value)}
+                      data-error={!!errors.identity_type}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.identity_type)}`}
+                    >
+                      <option value="">Select ID Type...</option>
+                      <option value="nin">NIN</option>
+                      <option value="passport">International Passport</option>
+                    </select>
+                    <FieldError msg={errors.identity_type} />
+
+                    <input
+                      type="text"
+                      placeholder="ID Number"
+                      value={identityNumber}
+                      onChange={e => setIdentityNumber(e.target.value)}
+                      data-error={!!errors.identity_number}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.identity_number)}`}
+                    />
+                    <FieldError msg={errors.identity_number} />
+
+                    <label className="text-xs font-bold block">Upload ID Image</label>
+                    <input
+                      type="file"
+                      data-error={!!errors.identity_image}
+                      onChange={e => setIdentityImage(e.target.files?.[0] ?? null)}
+                      className={`w-full border p-2 ${errBorder(errors.identity_image)}`}
+                    />
+                    <FieldError msg={errors.identity_image} />
+
+                    <label className="text-xs font-bold block">Upload Your Photo (Selfie)</label>
+                    <input
+                      type="file"
+                      data-error={!!errors.identity_selfie}
+                      onChange={e => setIdentitySelfie(e.target.files?.[0] ?? null)}
+                      className={`w-full border p-2 ${errBorder(errors.identity_selfie)}`}
+                    />
+                    <FieldError msg={errors.identity_selfie} />
+                  </div>
+                )}
+
+                {/* ── Personal Information ───────────────────────────────── */}
+                {(has('submission') || has('retrieval')) && (isCompanyDocument === 'company' || isCompanyDocument === 'personal') && (
+                  <div className="space-y-4 pt-4 border-t">
+                    <h3 className="font-bold text-lg">
+                      {isCompanyDocument === 'company' ? '9' : '8'}. Your Information
+                    </h3>
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={fullName}
+                      onChange={e => setFullName(e.target.value)}
+                      data-error={!!errors.info_name}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.info_name)}`}
+                    />
+                    <FieldError msg={errors.info_name} />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value)}
+                      data-error={!!errors.info_phone}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.info_phone)}`}
+                    />
+                    <FieldError msg={errors.info_phone} />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      data-error={!!errors.info_email}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.info_email)}`}
+                    />
+                    <FieldError msg={errors.info_email} />
+                    <input
+                      type="text"
+                      placeholder="Address"
+                      value={address}
+                      onChange={e => setAddress(e.target.value)}
+                      data-error={!!errors.info_address}
+                      className={`w-full border p-3 text-sm ${errBorder(errors.info_address)}`}
+                    />
+                    <FieldError msg={errors.info_address} />
+                  </div>
+                )}
+
+                {/* ── Order Summary ──────────────────────────────────────── */}
+                {lineItems.length > 0 && (
+                  <div className="pt-6 border-t">
+                    <div className="rounded-2xl border border-blue-100 overflow-hidden shadow-sm">
+                      <div className="bg-[#0052cc] px-6 py-4 flex items-center justify-between">
+                        <h3 className="font-extrabold text-white text-lg tracking-tight">10. Order Summary</h3>
+                        <span className="text-blue-200 text-xs uppercase tracking-widest font-semibold">Estimate</span>
+                      </div>
+                      <div className="bg-white divide-y divide-gray-100">
+                        {lineItems.map((item, i) => (
+                          <div key={i} className="px-6 py-4 flex items-start justify-between gap-4">
+                            <div>
+                              <p className="font-semibold text-gray-800 text-sm">{item.label}</p>
+                              {item.note && <p className="text-xs text-green-600 font-medium mt-0.5">{item.note}</p>}
+                            </div>
+                            <p className="font-bold text-gray-900 text-sm whitespace-nowrap">{fmt(item.amount)}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Estimated Total</p>
+                          <p className="text-[10px] text-gray-400 mt-0.5">Final price confirmed after review</p>
+                        </div>
+                        <p className="text-2xl font-extrabold text-[#0052cc]">{fmt(total)}</p>
+                      </div>
+                      <div className="bg-blue-50 px-6 py-3 border-t border-blue-100">
+                        <p className="text-xs text-blue-700 font-medium flex items-center gap-2">
+                          <MdCreditCard className="text-blue-500 text-sm shrink-0" />
+                          Payment instructions will be shared after your request is reviewed. No upfront payment required to submit.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Confirmation ───────────────────────────────────────── */}
+                <div className="space-y-4 pt-8 border-t">
+                  <label className="flex items-center gap-3 p-2 border border-gray-100 rounded">
+                    <input
+                      type="checkbox"
+                      checked={saveRequest}
+                      onChange={e => setSaveRequest(e.target.checked)}
+                    />
+                    <span className="text-sm font-medium">
+                      {lineItems.length > 0 ? '11' : '10'}. Save this request for future recall
+                    </span>
+                  </label>
+
+                  <div className="space-y-2 bg-blue-50 p-4 rounded">
+                    <p className="text-sm font-bold">
+                      {lineItems.length > 0 ? '12' : '11'}. Confirmation
+                    </p>
+                    <label className="flex items-center gap-3" data-error={!!errors.confirm_details}>
+                      <input
+                        type="checkbox"
+                        checked={confirmDetails}
+                        onChange={e => setConfirmDetails(e.target.checked)}
+                      />
+                      <span className="text-sm">I confirm all details are correct</span>
+                    </label>
+                    <FieldError msg={errors.confirm_details} />
+
+                    <label className="flex items-center gap-3" data-error={!!errors.confirm_authorize}>
+                      <input
+                        type="checkbox"
+                        checked={confirmAuthorize}
+                        onChange={e => setConfirmAuthorize(e.target.checked)}
+                      />
+                      <span className="text-sm">I authorize Submitar to act on my behalf</span>
+                    </label>
+                    <FieldError msg={errors.confirm_authorize} />
+                  </div>
+
+                  {submitAttempted && Object.keys(errors).length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-2">
+                      <MdWarning className="text-red-500 text-lg shrink-0" />
+                      <p className="text-sm text-red-700 font-medium">
+                        Please fix the {Object.keys(errors).length} error{Object.keys(errors).length > 1 ? 's' : ''} above before submitting.
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-700 text-white font-bold py-5 rounded-lg text-xl hover:bg-blue-800 transition-colors shadow-lg"
+                  >
+                    Submit Request
+                  </button>
+                </div>
+              </>
+            )}
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
