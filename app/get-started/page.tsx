@@ -1231,7 +1231,7 @@ export default function SubmitarForm() {
                     type="submit"
                     className="w-full bg-blue-700 text-white font-bold py-5 rounded-lg text-xl hover:bg-blue-800 transition-colors shadow-lg"
                   >
-                    Submit Request
+                    Review Request
                   </button>
                 </div>
               </>

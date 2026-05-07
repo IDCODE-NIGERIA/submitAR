@@ -18,10 +18,10 @@ export default function Footer() {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-4">
-              <div className="bg-black p-1.5 rounded">
-                <Image src="/SUBMITAR B.png" alt="Logo" width={60} height={24} />
+              <div className=" p-1.5 rounded">
+                <Image src="/SUBMITAR B.png" alt="Logo" width={140} height={48} />
               </div>
-              <span className="text-xl text-black font-bold">SubmitAR</span>
+              {/*<span className="text-xl text-black font-bold">SubmitAR</span>*/}
             </div>
             <p className="text-gray-500 text-sm mb-6 max-w-xs">
               A trusted partner for document submission and representation.
