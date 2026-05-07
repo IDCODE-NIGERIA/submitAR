@@ -399,7 +399,7 @@ export default function SubmitarForm() {
           </div>
 
           <header className="mb-10 border-b pb-6">
-            <h1 className="text-3xl font-extrabold text-blue-700">
+            <h1 className="text-3xl font-extrabold text-black">
               Submitar Service Request Form
             </h1>
           </header>

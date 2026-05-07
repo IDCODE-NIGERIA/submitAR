@@ -14,6 +14,7 @@ export default function Header() {
   const isAdminLoggedIn = false;   // Change this dynamically later
 
   const navLinks = [
+    { name: "Home", href: "/", },
     { name: "Services", href: "/#Services", id: "Services" },
     { name: "How It Works", href: "/#Howitworks", id: "Howitworks" },
     { name: "Pricing", href: "/#Pricing", id: "Pricing" },
@@ -46,9 +47,9 @@ export default function Header() {
 
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
-            <div className="relative w-34 h-14 bg-black rounded flex items-center justify-center">
+            <div className="relative w-34 h-14 rounded flex items-center justify-center">
               <Image
-                src="/sub.png"
+                src="/SUBMITAR B.png"
                 alt="SubmitAR Logo"
                 width={140}
                 height={140}
