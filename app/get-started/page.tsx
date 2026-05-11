@@ -694,12 +694,18 @@ export default function SubmitarForm() {
       <div className="bg-white min-h-screen pb-20">
         <div className="max-w-2xl mx-auto py-10 px-6 text-gray-800">
 
-          <div className="mb-8">
-            <a href="/" className="text-blue-600 hover:underline font-medium">← Back</a>
-          </div>
+         <div className="mb-8">
+  <button 
+    type="button"
+    onClick={() => window.location.href = '/'}
+    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors px-5 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+  >
+    ← Back
+  </button>
+</div>
 
           <header className="mb-10 border-b pb-6">
-            <h1 className="text-3xl font-extrabold text-black">Submitar Service Request Form</h1>
+            <h1 className="text-3xl font-semibold text-black">Submitar Service Request Form</h1>
           </header>
 
           <form className="space-y-10" onSubmit={handleSubmit} noValidate>
